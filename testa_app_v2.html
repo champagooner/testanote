@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>テスタ式 取引ノート</title>
+<style>
+  :root{
+    --ink:#1a1f2e; --paper:#f3f0e9; --card:#fffdf8; --line:#d8d2c4;
+    --green:#2f7d52; --green-bg:#e3f0e7; --red:#b0413a; --red-bg:#f6e3e1;
+    --amber:#b8862f; --amber-bg:#f6ecd6; --muted:#7c7666; --accent:#1c5b8a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    background:var(--paper);color:var(--ink);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:720px;margin:0 auto;padding:0 16px 80px}
+  header{padding:22px 0 14px;border-bottom:2px solid var(--ink)}
+  .logo{font-size:13px;letter-spacing:.18em;color:var(--accent);font-weight:700}
+  h1{font-size:26px;letter-spacing:.04em;margin-top:2px}
+  .sub{font-size:12.5px;color:var(--muted);margin-top:4px}
+  nav{display:flex;gap:0;margin:18px 0 22px;border:1.5px solid var(--ink);border-radius:10px;overflow:hidden}
+  nav button{flex:1;padding:11px 6px;background:var(--card);border:none;font-size:13.5px;font-weight:700;
+    color:var(--muted);cursor:pointer;border-right:1.5px solid var(--ink);transition:.15s}
+  nav button:last-child{border-right:none}
+  nav button.on{background:var(--ink);color:var(--paper)}
+  .card{background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+  label{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin:10px 0 4px}
+  input,select{width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:8px;
+    font-size:15px;background:#fff;color:var(--ink);font-family:inherit}
+  input:focus,select:focus{outline:none;border-color:var(--accent)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .btn{width:100%;padding:13px;background:var(--ink);color:var(--paper);border:none;border-radius:9px;
+    font-size:15px;font-weight:700;cursor:pointer;margin-top:16px;letter-spacing:.05em}
+  .btn:active{transform:translateY(1px)}
+  .btn-ghost{background:var(--card);color:var(--ink);border:1.5px solid var(--ink)}
+  .verdict{text-align:center;padding:20px;border-radius:12px;margin-bottom:14px}
+  .verdict.pass{background:var(--green-bg);border:2px solid var(--green)}
+  .verdict.watch{background:var(--amber-bg);border:2px solid var(--amber)}
+  .verdict.fail{background:var(--red-bg);border:2px solid var(--red)}
+  .verdict .big{font-size:24px;font-weight:800;letter-spacing:.05em}
+  .verdict.pass .big{color:var(--green)} .verdict.watch .big{color:var(--amber)} .verdict.fail .big{color:var(--red)}
+  .verdict .note{font-size:13px;color:var(--ink);margin-top:6px}
+  .check{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:13.5px}
+  .check:last-child{border-bottom:none}
+  .mark{flex-shrink:0;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-size:13px;font-weight:800;color:#fff}
+  .mark.ok{background:var(--green)} .mark.ng{background:var(--red)} .mark.na{background:var(--muted)}
+  .check .ttl{font-weight:700} .check .dsc{color:var(--muted);font-size:12px}
+  .row{display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--line)}
+  .row:last-child{border-bottom:none}
+  .row .nm{font-weight:700;font-size:15px} .row .meta{font-size:12px;color:var(--muted)}
+  .pill{font-size:11.5px;font-weight:800;padding:3px 10px;border-radius:20px}
+  .pill.pass{background:var(--green-bg);color:var(--green)} .pill.watch{background:var(--amber-bg);color:var(--amber)} .pill.fail{background:var(--red-bg);color:var(--red)}
+  .hold-card{border-left:5px solid var(--line)}
+  .hold-card.buy{border-left-color:var(--green)} .hold-card.hold{border-left-color:var(--accent)}
+  .hold-card.exit{border-left-color:var(--red)} .hold-card.take{border-left-color:var(--amber)}
+  .ladder{display:flex;gap:6px;margin-top:10px;font-size:11px;text-align:center}
+  .ladder div{flex:1;padding:6px 2px;border-radius:6px;background:#f3f0e9}
+  .ladder .lab{display:block;color:var(--muted);font-size:10px}
+  .ladder .val{font-weight:800;font-size:13px}
+  .status-line{font-size:13.5px;font-weight:700;margin-top:10px;padding:8px;border-radius:7px;text-align:center}
+  .empty{text-align:center;color:var(--muted);font-size:13px;padding:30px 10px}
+  .hint{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.5}
+  .seed{font-size:12px;color:var(--accent);font-weight:700;cursor:pointer;text-decoration:underline;margin-top:10px;display:inline-block}
+  footer{font-size:11px;color:var(--muted);text-align:center;margin-top:24px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">TESTA METHOD · 取引ノート</div>
+    <h1>負けない投資ノート</h1>
+    <div class="sub">テスタ式「割安・低PBR・負けない」を1銘柄ずつ確認 → 候補を並べる → 保有を見守る</div>
+  </header>
+
+  <nav>
+    <button class="on" data-tab="diag">① 診断</button>
+    <button data-tab="screen">② 候補</button>
+    <button data-tab="hold">③ 保有</button>
+    <button data-tab="log">④ 記録</button>
+  </nav>
+
+  <!-- 診断タブ -->
+  <section id="diag">
+    <div class="card">
+      <label>銘柄名・コード</label>
+      <input id="d_name" placeholder="例：ジェイテクト 6473">
+      <button class="btn btn-ghost" id="fetchBtn" onclick="fetchStockData()" style="margin-top:10px">🔍 ネットから株価・指標を取得</button>
+      <div id="fetch_status" class="hint" style="display:none"></div>
+      <div id="fetch_candidates"></div>
+      <div style="margin-top:8px">
+        <span class="seed" onclick="toggleSettings()">⚙ 設定（APIキー）</span>
+        <div id="settings_box" style="display:none;margin-top:8px;padding:12px;background:#f3f0e9;border-radius:8px">
+          <label style="margin-top:0">Twelve Data APIキー（無料・任意）</label>
+          <input id="td_key_input" placeholder="キーを貼り付け" style="font-size:13px">
+          <button class="btn" style="margin-top:8px;padding:9px" onclick="saveSettings()">保存</button>
+          <div class="hint" style="margin-top:8px">キーを入れると株価取得が安定します（推奨）。未設定でもYahoo経由で取得を試みます。キーはこの端末内にのみ保存され、外部に送信されません。取得方法は会話内の手順を参照。</div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div><label>株価（円）</label><input id="d_price" type="number" placeholder="2027"></div>
+        <div><label>PBR（倍）</label><input id="d_pbr" type="number" step="0.01" placeholder="0.81"></div>
+      </div>
+      <div class="grid2">
+        <div><label>PER（予・倍）</label><input id="d_per" type="number" step="0.1" placeholder="12.8"></div>
+        <div><label>配当利回り（%）</label><input id="d_yield" type="number" step="0.1" placeholder="3.5"></div>
+      </div>
+      <div class="grid2">
+        <div><label>直近高値（円）<span style="font-weight:400">※3ヶ月目安</span></label><input id="d_rhigh" type="number" placeholder="2087"></div>
+        <div><label>直近安値（円）</label><input id="d_rlow" type="number" placeholder="1554"></div>
+      </div>
+      <label>利益トレンド（直近の営業利益）</label>
+      <select id="d_profit">
+        <option value="up">増益（前年より伸びている）</option>
+        <option value="flat">横ばい</option>
+        <option value="down">減益（前年より減っている）</option>
+        <option value="loss">赤字</option>
+      </select>
+      <label>チャートの位置</label>
+      <select id="d_chart">
+        <option value="base">急騰していない・底値圏／持ち合い</option>
+        <option value="rise">上昇途中</option>
+        <option value="high">急騰後の高値圏・調整入り</option>
+      </select>
+      <button class="btn" onclick="diagnose()">テスタ式で診断する</button>
+      <span class="seed" onclick="fillSample()">サンプル（ジェイテクト）を入れる</span>
+    </div>
+    <div id="d_result"></div>
+  </section>
+
+  <!-- スクリーニングタブ -->
+  <section id="screen" style="display:none">
+    <div class="card">
+      <div style="font-size:13px;color:var(--muted)">診断した銘柄がスコア順に並びます。今日まで見てきた銘柄を入れておきました。</div>
+      <button class="btn btn-ghost" onclick="seedScreen()">サンプル4銘柄を読み込む</button>
+      <button class="btn" id="updBtn" onclick="updatePrices()" style="margin-top:8px">🔄 最新価格を一括取得（前日終値/当日朝）</button>
+      <div id="upd_status" class="hint" style="display:none"></div>
+    </div>
+    <div id="s_list"></div>
+  </section>
+
+  <!-- 保有管理タブ -->
+  <section id="hold" style="display:none">
+    <div class="card" style="background:#eef3f7;border-color:var(--accent)">
+      <div style="font-size:13.5px;font-weight:800;color:var(--accent)">💰 資金管理（テスタ式：1銘柄の負けは総資金の5%まで）</div>
+      <div class="grid2">
+        <div><label>総資金（円）</label><input id="cap_total" type="number" placeholder="300000" onchange="capChanged()"></div>
+        <div><label>1銘柄の許容損失（%）</label><input id="cap_risk" type="number" step="0.5" value="5" onchange="capChanged()"></div>
+      </div>
+      <div id="pos_calc" class="hint" style="margin-top:8px">買値と撤退ラインを入れると、この資金設定での「買ってよい上限株数」を自動計算します。</div>
+    </div>
+    <div class="card">
+      <label>銘柄名</label>
+      <input id="h_name" placeholder="例：NTN 6472">
+      <div class="grid2">
+        <div><label>現在値（円）</label><input id="h_now" type="number" placeholder="429"></div>
+        <div><label>買値（円）</label><input id="h_buy" type="number" placeholder="400" oninput="calcPosition()"></div>
+      </div>
+      <div class="grid2">
+        <div><label>押し目買いライン</label><input id="h_dip" type="number" placeholder="400"></div>
+        <div><label>撤退ライン（損切り）</label><input id="h_exit" type="number" placeholder="357" oninput="calcPosition()"></div>
+      </div>
+      <div class="grid2">
+        <div><label>利確ライン</label><input id="h_take" type="number" placeholder="453"></div>
+        <div><label>株数</label><input id="h_qty" type="number" placeholder="40"></div>
+      </div>
+      <button class="btn" onclick="addHold()">保有リストに追加</button>
+      <div class="hint">撤退ラインは「株価が何%下げたか」ではなく、テスタ式では本来「想定シナリオが崩れたか」で決めます。価格は機械的な保険線として併用してください。</div>
+    </div>
+    <div id="h_list"><div class="empty">まだ保有銘柄がありません</div></div>
+  </section>
+
+  <!-- 記録タブ -->
+  <section id="log" style="display:none">
+    <div id="log_stats"></div>
+    <div id="log_list"><div class="empty">売却した取引がここに記録されます。<br>保有管理の「売却して記録」から登録してください。</div></div>
+  </section>
+
+  <footer>
+    これは学習・記録用の試作ツールです。判定はテスタ式ルールを単純化したもので、投資助言ではありません。<br>
+    最終判断は必ずご自身で、最新の株価・決算を確認のうえ行ってください。
+  </footer>
+</div>
+
+<script>
+// ===================================================================
+// 株価取得エンジン（外部ホスティング前提：GitHub Pages等で動作）
+//  本命: Twelve Data（CORS対応・要無料APIキー）
+//  予備: Yahoo Finance v8 を AllOrigins 経由（キー不要）
+//  指標: Twelve Data → 取れなければ kabutan を AllOrigins 経由でスクレイプ
+// ===================================================================
+
+const PROXY = "https://api.allorigins.win/raw?url="; // CORS中継
+
+function getApiKey(){ return (localStorage.getItem('td_key')||'').trim(); }
+function setApiKey(v){ localStorage.setItem('td_key', (v||'').trim()); }
+
+// コード抽出（"村田製作所 6981" や "6981" → "6981"）
+function extractCode(s){ const m=(s||'').match(/\d{4}[A-Z0-9]?/); return m?m[0]:null; }
+
+// --- 本命：Twelve Data から 株価・前日終値・52週高安 を取得 ---
+async function fetchFromTwelveData(code){
+  const key=getApiKey();
+  if(!key||!code) return null;
+  try{
+    const url=`https://api.twelvedata.com/quote?symbol=${code}&mic_code=XTKS&apikey=${key}`;
+    const res=await fetch(url);
+    const q=await res.json();
+    if(q.status==='error' || q.code===429) return {error:q.message||'APIエラー(制限超過の可能性)'};
+    if(q.close==null) return null;
+    return {
+      price: +parseFloat(q.close).toFixed(1),
+      prevClose: q.previous_close? +parseFloat(q.previous_close).toFixed(1):null,
+      recentHigh: q.fifty_two_week&&q.fifty_two_week.high? +parseFloat(q.fifty_two_week.high).toFixed(1):null,
+      recentLow: q.fifty_two_week&&q.fifty_two_week.low? +parseFloat(q.fifty_two_week.low).toFixed(1):null,
+      date: (q.datetime||'')+'',
+      src:'TwelveData'
+    };
+  }catch(e){ return null; }
+}
+
+// --- 予備：Yahoo Finance v8（AllOrigins中継、キー不要） ---
+async function fetchFromYahoo(code){
+  if(!code) return null;
+  try{
+    const t=`https://query1.finance.yahoo.com/v8/finance/chart/${code}.T?range=3mo&interval=1d`;
+    const res=await fetch(PROXY+encodeURIComponent(t));
+    const data=await res.json();
+    const r=data&&data.chart&&data.chart.result&&data.chart.result[0];
+    if(!r||!r.meta) return null;
+    const m=r.meta;
+    // 直近3ヶ月の高安をチャートから算出
+    let hi=null, lo=null;
+    try{
+      const q=r.indicators.quote[0];
+      const highs=(q.high||[]).filter(x=>x!=null), lows=(q.low||[]).filter(x=>x!=null);
+      if(highs.length) hi=+Math.max(...highs).toFixed(1);
+      if(lows.length) lo=+Math.min(...lows).toFixed(1);
+    }catch(e){}
+    return {
+      price: m.regularMarketPrice? +(+m.regularMarketPrice).toFixed(1):null,
+      prevClose: m.previousClose? +(+m.previousClose).toFixed(1):null,
+      recentHigh: hi || (m.fiftyTwoWeekHigh? +(+m.fiftyTwoWeekHigh).toFixed(1):null),
+      recentLow: lo || (m.fiftyTwoWeekLow? +(+m.fiftyTwoWeekLow).toFixed(1):null),
+      date: 'Yahoo最新',
+      src:'Yahoo'
+    };
+  }catch(e){ return null; }
+}
+
+// --- 指標：kabutan を AllOrigins 経由でスクレイプ（PBR/PER/配当/銘柄名） ---
+async function fetchFundamentalsFromKabutan(code){
+  if(!code) return null;
+  try{
+    const t=`https://kabutan.jp/stock/?code=${code}`;
+    const res=await fetch(PROXY+encodeURIComponent(t));
+    const html=await res.text();
+    const pick=(re)=>{ const m=html.match(re); return m? parseFloat(m[1].replace(/,/g,'')) : null; };
+    // kabutanの表記ゆれに耐えるよう複数パターンで拾う
+    const per=pick(/PER[^0-9\-]*<[^>]*>?\s*([\d,]+\.?\d*)\s*倍/i) ?? pick(/PER[\s\S]{0,40}?([\d,]+\.\d+)\s*倍/i);
+    const pbr=pick(/PBR[\s\S]{0,40}?([\d,]+\.\d+)\s*倍/i);
+    const yld=pick(/利回り[\s\S]{0,40}?([\d,]+\.\d+)\s*[%％]/);
+    let nm=null; const nmM=html.match(/<title>([^<]+?)【/); if(nmM) nm=nmM[1].trim();
+    if(per==null&&pbr==null&&yld==null) return null;
+    return {per, pbr, yield:yld, name: nm? `${nm} ${code}`:null, src:'kabutan'};
+  }catch(e){ return null; }
+}
+
+async function fetchStockData(){
+  const name=document.getElementById('d_name').value.trim();
+  const st=document.getElementById('fetch_status');
+  const cand=document.getElementById('fetch_candidates');
+  if(!name){st.style.display='block';st.textContent='先に銘柄名かコードを入れてください';return;}
+  const code=extractCode(name);
+  if(!code){st.style.display='block';st.textContent='4桁の証券コードを含めてください（例：村田製作所 6981）';return;}
+  st.style.display='block';
+  cand.innerHTML='';
+  document.getElementById('fetchBtn').disabled=true;
+
+  // --- 株価：本命TwelveData → 予備Yahoo ---
+  let price=null, srcNote='';
+  if(getApiKey()){
+    st.textContent='最新株価を取得中…（Twelve Data）';
+    const td=await fetchFromTwelveData(code);
+    if(td&&!td.error) price=td;
+    else if(td&&td.error) srcNote=td.error+' → Yahooで再試行';
+  }
+  if(!price){
+    st.textContent='最新株価を取得中…（Yahoo経由）';
+    price=await fetchFromYahoo(code);
+  }
+
+  // --- 指標：kabutan ---
+  st.textContent=(price?'株価取得OK。':'')+'PBR・PER・配当を取得中…（kabutan）';
+  const fund=await fetchFundamentalsFromKabutan(code);
+
+  if(!price && !fund){
+    st.innerHTML='取得に失敗しました。'
+      +(getApiKey()?'':'<b>APIキー未設定の可能性</b>があります。下の「⚙ 設定」でTwelve Dataキーを入れると安定します。')
+      +'<br>※このアプリは外部ホスティング（GitHub Pages等）で動かす前提です。Claudeアプリ内では取得できません。';
+    document.getElementById('fetchBtn').disabled=false; return;
+  }
+
+  // --- 統合 ---
+  const j={ name:(fund&&fund.name)||name };
+  if(price){
+    j.price=price.price; j.prevClose=price.prevClose;
+    j.recentHigh=price.recentHigh; j.recentLow=price.recentLow;
+  }
+  if(fund){ if(fund.per!=null)j.per=fund.per; if(fund.pbr!=null)j.pbr=fund.pbr; if(fund.yield!=null)j.yield=fund.yield; }
+  // チャート位置を価格と高安から自動推定
+  if(j.price&&j.recentHigh&&j.recentLow&&j.recentHigh>j.recentLow){
+    const pos=(j.price-j.recentLow)/(j.recentHigh-j.recentLow);
+    j.chart = pos>0.85?'high' : pos<0.35?'base' : 'rise';
+  }
+  j.source=`株価=${price?price.src+(price.date?'('+price.date+')':''):'取得不可'} / 指標=${fund?'kabutan':'取得不可'}`;
+  j.confidence = price?'high':'medium';
+
+  st.textContent='✅ 取得しました。内容を確認して「採用」を。発注前は必ず証券アプリの板で最終確認を。'
+    +(srcNote?'（'+srcNote+'）':'');
+
+  const profitLabel={up:'増益',flat:'横ばい',down:'減益',loss:'赤字'};
+  const chartLabel={base:'底値圏/持ち合い',rise:'上昇途中',high:'急騰後の高値圏'};
+  const priceNote = price
+    ? `株価 ${j.price??'?'}円`+(j.prevClose?`（前日終値 ${j.prevClose}円）`:'')
+    : '株価は取得できませんでした（手入力してください）';
+  cand.innerHTML=`<div class="card" style="margin-top:10px;background:#eef3f7;border-color:var(--accent)">
+    <div style="font-size:13px;font-weight:700">${j.name||name}</div>
+    <div style="font-size:13px;font-weight:800;color:var(--accent);margin-top:4px">${priceNote}</div>
+    <div style="font-size:13px;margin-top:6px;line-height:1.8">
+      PBR: <b>${j.pbr??'?'}倍</b> ／ PER: <b>${j.per??'?'}倍</b> ／ 配当: <b>${j.yield??'?'}%</b><br>
+      直近高値: <b>${j.recentHigh??'?'}円</b> ／ 直近安値: <b>${j.recentLow??'?'}円</b>
+      ${j.chart?`／ 推定位置: <b>${chartLabel[j.chart]}</b>`:''}
+    </div>
+    <div class="hint">${j.source}</div>
+    <button class="btn" style="margin-top:10px" onclick='applyFetched(${JSON.stringify(JSON.stringify(j))})'>この値を採用してフォームに入れる</button>
+  </div>`;
+  document.getElementById('fetchBtn').disabled=false;
+}
+function applyFetched(jstr){
+  const j=JSON.parse(jstr);
+  if(j.name)document.getElementById('d_name').value=j.name;
+  if(j.price!=null)document.getElementById('d_price').value=j.price;
+  if(j.pbr!=null)document.getElementById('d_pbr').value=j.pbr;
+  if(j.per!=null)document.getElementById('d_per').value=j.per;
+  if(j.yield!=null)document.getElementById('d_yield').value=j.yield;
+  if(j.profit)document.getElementById('d_profit').value=j.profit;
+  if(j.chart)document.getElementById('d_chart').value=j.chart;
+  if(j.recentHigh!=null)document.getElementById('d_rhigh').value=j.recentHigh;
+  if(j.recentLow!=null)document.getElementById('d_rlow').value=j.recentLow;
+  document.getElementById('fetch_candidates').innerHTML='';
+  document.getElementById('fetch_status').textContent='フォームに反映しました。内容を確認して診断してください。';
+}
+
+// ===== 設定（APIキー） =====
+function toggleSettings(){
+  const b=document.getElementById('settings_box');
+  b.style.display = b.style.display==='none'?'block':'none';
+  document.getElementById('td_key_input').value=getApiKey();
+}
+function saveSettings(){
+  setApiKey(document.getElementById('td_key_input').value);
+  document.getElementById('fetch_status').style.display='block';
+  document.getElementById('fetch_status').textContent='APIキーを保存しました。';
+  document.getElementById('settings_box').style.display='none';
+}
+
+// ===== タブ切替 =====
+document.querySelectorAll('nav button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    ['diag','screen','hold','log'].forEach(id=>document.getElementById(id).style.display='none');
+    document.getElementById(b.dataset.tab).style.display='block';
+    if(b.dataset.tab==='log') renderLog();
+  };
+});
+
+// ===== テスタ式 判定ロジック =====
+function evaluate(d){
+  const checks=[];
+  // ① 割安性：PBR1倍割れ
+  checks.push({ok: d.pbr>0 && d.pbr<1, ttl:'割安性（PBR1倍割れ）',
+    dsc:`PBR ${d.pbr}倍 ${d.pbr<1?'→ 解散価値割れ、東証の改善要求の対象':'→ 1倍超。割安とは言いにくい'}`});
+  // ② 黒字で増益
+  const profOk = d.profit==='up';
+  checks.push({ok:profOk, na:d.profit==='flat',
+    ttl:'黒字で利益が伸びている',
+    dsc: d.profit==='up'?'増益基調。将来の利益の柱がある':
+         d.profit==='flat'?'横ばい。決め手に欠ける':
+         d.profit==='loss'?'赤字。テスタ式では原則見送り':'減益中。慎重に'});
+  // ③ チャートが高値圏でない（高値掴み回避）
+  checks.push({ok:d.chart==='base', na:d.chart==='rise',
+    ttl:'高値掴みでない位置',
+    dsc: d.chart==='base'?'急騰しておらず、下値が限定的':
+         d.chart==='rise'?'上昇途中。初動か確認を':'急騰後の高値圏。今は見送り・押し目待ち'});
+  // ④ 妙味：配当やPERの納得感（補助）
+  checks.push({ok:(d.yield>=2.5)||(d.per>0&&d.per<15), na:true,
+    ttl:'妙味（配当/割安度の補助）',
+    dsc:`配当${d.yield||0}% / PER${d.per||'-'}倍 ${((d.yield>=2.5)||(d.per>0&&d.per<15))?'→ 下値で報われやすい':'→ 補助指標は弱め'}`});
+
+  const hardFail = (d.profit==='loss') || (d.chart==='high');
+  const okCount = checks.filter(c=>c.ok).length;
+  let verdict;
+  if(hardFail) verdict='fail';
+  else if(d.pbr>0 && d.pbr<1 && profOk && d.chart==='base') verdict='pass';
+  else verdict='watch';
+  return {checks,verdict,okCount};
+}
+
+function diagnose(){
+  const d={
+    name:document.getElementById('d_name').value||'(無名銘柄)',
+    price:+document.getElementById('d_price').value,
+    pbr:+document.getElementById('d_pbr').value,
+    per:+document.getElementById('d_per').value,
+    yield:+document.getElementById('d_yield').value,
+    profit:document.getElementById('d_profit').value,
+    chart:document.getElementById('d_chart').value,
+    rhigh:+document.getElementById('d_rhigh').value,
+    rlow:+document.getElementById('d_rlow').value
+  };
+  const r=evaluate(d);
+  const vtext={pass:'買い候補',watch:'様子見・押し目待ち',fail:'今は見送り'};
+  const vnote={
+    pass:'テスタ式の主要条件を満たしています。それでも一度に全力は禁物、分割で。',
+    watch:'惜しい。どれかの条件が未達です。条件が整うまで待つのも立派な判断。',
+    fail:'赤字、または急騰後の高値圏です。テスタ式では手を出さない場面。'
+  };
+  let html=`<div class="card"><div class="verdict ${r.verdict}">
+    <div class="big">${vtext[r.verdict]}</div>
+    <div class="note">${d.name}　${vnote[r.verdict]}</div></div>`;
+  r.checks.forEach(c=>{
+    const cls=c.ok?'ok':(c.na?'na':'ng'); const sym=c.ok?'○':(c.na?'△':'×');
+    html+=`<div class="check"><div class="mark ${cls}">${sym}</div>
+      <div><div class="ttl">${c.ttl}</div><div class="dsc">${c.dsc}</div></div></div>`;
+  });
+  // ===== チャンス価格の提案 =====
+  const lines=suggestLines(d);
+  if(lines){
+    html+=`<div style="margin-top:14px;padding:14px;background:#eef3f7;border-radius:10px;border:1.5px solid var(--accent)">
+      <div style="font-size:13.5px;font-weight:800;color:var(--accent)">📐 チャンス価格の提案（直近レンジ ${d.rlow}〜${d.rhigh}円から計算）</div>
+      <div class="ladder" style="margin-top:8px">
+        <div><span class="lab">押し目①</span><span class="val" style="color:var(--green)">${lines.dip1}</span></div>
+        <div><span class="lab">押し目②</span><span class="val" style="color:var(--green)">${lines.dip2}</span></div>
+        <div><span class="lab">撤退</span><span class="val" style="color:var(--red)">${lines.exit}</span></div>
+        <div><span class="lab">利確①</span><span class="val" style="color:var(--amber)">${lines.take1}</span></div>
+        <div><span class="lab">利確②</span><span class="val" style="color:var(--amber)">${lines.take2}</span></div>
+      </div>
+      <div class="hint" style="margin-top:8px">${lines.comment}</div>
+      <div class="hint">計算根拠: 押し目①=レンジ下1/4、押し目②=直近安値付近、撤退=直近安値の3%下（サポート割れ）、利確①=直近高値、利確②=高値+10%。<b>撤退の本筋は価格でなく「シナリオ崩壊」</b>（減益転落・材料消滅など）です。</div>
+      <button class="btn btn-ghost" style="margin-top:10px" onclick='sendToHold(${JSON.stringify(JSON.stringify(d))},${JSON.stringify(JSON.stringify(lines))})'>このラインで保有管理に登録</button>
+    </div>`;
+  } else {
+    html+=`<div class="hint" style="margin-top:10px">※直近高値・安値を入れると、押し目・撤退・利確のチャンス価格を提案します。</div>`;
+  }
+  html+=`<button class="btn btn-ghost" onclick='saveToScreen(${JSON.stringify(JSON.stringify(d))})'>この銘柄を候補リストに保存</button></div>`;
+  document.getElementById('d_result').innerHTML=html;
+}
+
+// 直近レンジから押し目・撤退・利確を計算
+function suggestLines(d){
+  if(!d.rhigh||!d.rlow||d.rhigh<=d.rlow) return null;
+  const range=d.rhigh-d.rlow;
+  const rnd=v=>{ // 株価帯に応じた丸め
+    const u=v>=5000?50:v>=1000?10:v>=500?5:1;
+    return Math.round(v/u)*u;
+  };
+  const dip1=rnd(d.rlow+range*0.25);
+  const dip2=rnd(d.rlow);
+  const exit=rnd(d.rlow*0.97);
+  const take1=rnd(d.rhigh);
+  const take2=rnd(d.rhigh*1.10);
+  let comment;
+  const pos=(d.price-d.rlow)/range; // 現在値のレンジ内位置 0〜1
+  if(d.chart==='high'||pos>0.8) comment=`現在値${d.price}円はレンジ上部（上から${Math.round((1-pos)*100)}%）。今は買わず、押し目①${dip1}円までの調整を待つのがテスタ式です。`;
+  else if(pos<0.35) comment=`現在値${d.price}円はすでに押し目圏。分割で打診を始められる位置ですが、撤退${exit}円割れなら退く規律とセットで。`;
+  else comment=`現在値${d.price}円はレンジ中段。押し目①${dip1}円への指値で待つか、レンジ上限${take1}円の出来高を伴う上抜け（初動）を確認してから入る、の二択です。`;
+  return {dip1,dip2,exit,take1,take2,comment};
+}
+
+// 診断からチャンス価格つきで保有管理へ
+function sendToHold(djson,ljson){
+  const d=JSON.parse(djson), l=JSON.parse(ljson);
+  document.getElementById('h_name').value=d.name;
+  document.getElementById('h_now').value=d.price||'';
+  document.getElementById('h_buy').value='';
+  document.getElementById('h_dip').value=l.dip1;
+  document.getElementById('h_exit').value=l.exit;
+  document.getElementById('h_take').value=l.take1;
+  document.querySelector('nav button[data-tab="hold"]').click();
+}
+
+function fillSample(){
+  document.getElementById('d_name').value='ジェイテクト 6473';
+  document.getElementById('d_price').value=2027;
+  document.getElementById('d_pbr').value=0.81;
+  document.getElementById('d_per').value=12.8;
+  document.getElementById('d_yield').value=3.5;
+  document.getElementById('d_profit').value='down';
+  document.getElementById('d_chart').value='base';
+  document.getElementById('d_rhigh').value=2087;
+  document.getElementById('d_rlow').value=1554;
+}
+
+// ===== スクリーニング =====
+let screenList=[];
+function today(){const t=new Date();return `${t.getMonth()+1}/${t.getDate()}`;}
+function saveToScreen(djson){
+  const d=JSON.parse(djson); const r=evaluate(d);
+  screenList=screenList.filter(x=>x.d.name!==d.name);
+  screenList.push({d,verdict:r.verdict,score:r.okCount,regPrice:d.price||null,regDate:today()});
+  renderScreen(); persist();
+  document.querySelector('nav button[data-tab="screen"]').click();
+}
+function seedScreen(){
+  const samples=[
+    {name:'不二越 6474',price:5860,pbr:0.73,per:19.9,yield:1.7,profit:'up',chart:'rise'},
+    {name:'日本精工 6471',price:1188,pbr:0.83,per:26,yield:3.0,profit:'up',chart:'high'},
+    {name:'ジェイテクト 6473',price:2027,pbr:0.81,per:12.8,yield:3.5,profit:'down',chart:'base'},
+    {name:'NTN 6472',price:429,pbr:0.85,per:23,yield:2.8,profit:'up',chart:'high'}
+  ];
+  samples.forEach(d=>{const r=evaluate(d);
+    screenList=screenList.filter(x=>x.d.name!==d.name);
+    screenList.push({d,verdict:r.verdict,score:r.okCount,regPrice:d.price,regDate:today()});});
+  renderScreen(); persist();
+}
+function renderScreen(){
+  const order={pass:0,watch:1,fail:2};
+  screenList.sort((a,b)=>order[a.verdict]-order[b.verdict]||b.score-a.score);
+  const vt={pass:'買い候補',watch:'様子見',fail:'見送り'};
+  if(!screenList.length){document.getElementById('s_list').innerHTML='<div class="empty">診断した銘柄がここに並びます</div>';return;}
+  let html='';
+  screenList.forEach((s,i)=>{
+    let priceLine='';
+    if(s.lastPrice!=null){
+      const diff = s.regPrice ? (((s.lastPrice-s.regPrice)/s.regPrice)*100).toFixed(1) : null;
+      const col = diff===null ? 'var(--muted)' : (diff>=0?'var(--green)':'var(--red)');
+      priceLine=`<div class="meta"><b>${s.priceLabel||'直近'}: ${s.lastPrice}円</b>`
+        +(s.prevClose!=null&&s.prevClose!==s.lastPrice?` ／ 前日終値: ${s.prevClose}円`:'')
+        +(diff!==null?` <span style="color:${col};font-weight:800">（登録時比 ${diff>=0?'+':''}${diff}%）</span>`:'')
+        +(s.priceDate?`<span style="color:var(--muted)"> ${s.priceDate}</span>`:'')
+        +`</div>`;
+    }
+    html+=`<div class="card" style="padding:14px 18px"><div class="row" style="border:none;padding:0">
+      <div><div class="nm">${s.d.name}</div>
+      <div class="meta">PBR${s.d.pbr} / PER${s.d.per||'-'} / 配当${s.d.yield||0}%</div>
+      <div class="meta" style="color:var(--accent);font-weight:700">登録時: ${s.regPrice??'-'}円（${s.regDate||'-'}）</div>
+      ${priceLine}</div>
+      <div style="text-align:right">
+        <span class="pill ${s.verdict}">${vt[s.verdict]}</span><br>
+        <button onclick="buyFromScreen(${i})" style="margin-top:8px;padding:6px 16px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:12.5px;font-weight:800;cursor:pointer">買い → 保有へ</button>
+      </div></div></div>`;
+  });
+  document.getElementById('s_list').innerHTML=html;
+}
+
+// ===== 候補リストの最新価格 一括取得 =====
+async function updatePrices(){
+  const st=document.getElementById('upd_status');
+  if(!screenList.length){st.style.display='block';st.textContent='候補リストが空です。先に銘柄を登録してください。';return;}
+  st.style.display='block';
+  document.getElementById('updBtn').disabled=true;
+  st.textContent=`最新株価を取得中…（${screenList.length}銘柄）`;
+  let hit=0; const failed=[];
+  // 1銘柄ずつ：TwelveData→Yahooの順。APIの分間制限に配慮し軽く間隔を空ける
+  for(const s of screenList){
+    const code=extractCode(s.d.name);
+    let r=null;
+    if(getApiKey()){ const td=await fetchFromTwelveData(code); if(td&&!td.error) r=td; }
+    if(!r) r=await fetchFromYahoo(code);
+    if(r&&r.price!=null){
+      s.lastPrice=r.price; s.prevClose=r.prevClose;
+      s.priceLabel=r.src; s.priceDate=r.date||'';
+      hit++;
+    } else { failed.push(s.d.name); }
+    renderScreen();
+    await new Promise(res=>setTimeout(res, 300)); // 制限対策の小休止
+  }
+  persist();
+  st.innerHTML=`${hit}/${screenList.length}銘柄を更新しました。`
+    +(failed.length?`<br>取得できず: ${failed.join('、')}（時間をおいて再試行を）`:'')
+    +`<br>発注前は必ず証券アプリの板で確認を。`;
+  document.getElementById('updBtn').disabled=false;
+}
+function buyFromScreen(i){
+  const s=screenList[i];
+  document.getElementById('h_name').value=s.d.name;
+  ['h_now','h_buy','h_dip','h_exit','h_take','h_qty'].forEach(id=>document.getElementById(id).value='');
+  document.querySelector('nav button[data-tab="hold"]').click();
+  document.getElementById('h_now').focus();
+}
+
+// ===== 資金管理：ポジションサイズ計算 =====
+function capChanged(){ calcPosition(); persist(); }
+function calcPosition(){
+  const cap=+document.getElementById('cap_total').value;
+  const risk=+document.getElementById('cap_risk').value||5;
+  const buy=+document.getElementById('h_buy').value;
+  const exit=+document.getElementById('h_exit').value;
+  const el=document.getElementById('pos_calc');
+  if(!cap){el.innerHTML='総資金を入れると、買ってよい上限株数を自動計算します。';return;}
+  if(!buy||!exit||buy<=exit){el.innerHTML='買値と撤退ライン（買値より下）を入れると上限株数を計算します。';return;}
+  const lossPerShare=buy-exit;
+  const maxLoss=cap*risk/100;
+  const maxQty=Math.floor(maxLoss/lossPerShare);
+  const cost=maxQty*buy;
+  el.innerHTML=`この設定なら <b style="color:var(--accent)">上限 ${maxQty}株</b>（投資額 約${cost.toLocaleString()}円）。`
+    +`撤退ライン${exit}円で切れば、最大損失は約${Math.round(maxQty*lossPerShare).toLocaleString()}円＝総資金の${risk}%以内に収まります。`
+    +`<br><b>これを超える株数は、テスタ式ではルール違反です。</b>`;
+}
+
+// ===== 保有管理 =====
+let holds=[];
+let trades=[];
+function addHold(){
+  const h={
+    name:document.getElementById('h_name').value||'(無名)',
+    now:+document.getElementById('h_now').value,
+    buy:+document.getElementById('h_buy').value,
+    dip:+document.getElementById('h_dip').value,
+    exit:+document.getElementById('h_exit').value,
+    take:+document.getElementById('h_take').value,
+    qty:+document.getElementById('h_qty').value||null,
+    inDate:today()
+  };
+  // ルール違反チェック（警告のみ、登録は可能）
+  const cap=+document.getElementById('cap_total').value;
+  const risk=+document.getElementById('cap_risk').value||5;
+  if(cap&&h.buy&&h.exit&&h.qty&&h.buy>h.exit){
+    const loss=(h.buy-h.exit)*h.qty;
+    if(loss>cap*risk/100){
+      if(!confirm(`⚠️ ルール違反警告\nこの株数だと撤退時の損失が約${Math.round(loss).toLocaleString()}円となり、総資金の${risk}%（${Math.round(cap*risk/100).toLocaleString()}円）を超えます。\n\nそれでも登録しますか？`)) return;
+      h.ruleBreak=true;
+    }
+  }
+  holds.push(h); renderHolds(); persist();
+  ['h_name','h_now','h_buy','h_dip','h_exit','h_take','h_qty'].forEach(id=>document.getElementById(id).value='');
+}
+function renderHolds(){
+  if(!holds.length){document.getElementById('h_list').innerHTML='<div class="empty">まだ保有銘柄がありません</div>';return;}
+  let html='';
+  holds.forEach((h,i)=>{
+    let state,cls,msg;
+    if(h.exit && h.now<=h.exit){state='撤退検討';cls='exit';msg='撤退ライン到達。シナリオが崩れていないか確認を';}
+    else if(h.take && h.now>=h.take){state='利確圏';cls='take';msg='利確ライン到達。一部利確を検討';}
+    else if(h.dip && h.now<=h.dip){state='押し目・買い増し圏';cls='buy';msg='押し目ライン。分割で買い増し検討';}
+    else {state='保有継続';cls='hold';msg='ラインの範囲内。見守り';}
+    const pl = h.buy? (((h.now-h.buy)/h.buy)*100).toFixed(1):null;
+    const plYen = (h.buy&&h.qty)? Math.round((h.now-h.buy)*h.qty):null;
+    html+=`<div class="card hold-card ${cls}">
+      <div class="row" style="border:none;padding:0 0 4px">
+        <div><div class="nm">${h.name}${h.ruleBreak?' <span style="color:var(--red);font-size:11px">⚠ルール超過</span>':''}</div>
+        <div class="meta">${h.qty?h.qty+'株':''} ${h.inDate?'／ '+h.inDate+'〜':''}</div></div>
+        <div style="text-align:right"><div class="nm">${h.now}円</div>
+        ${pl!==null?`<div class="meta" style="color:${pl>=0?'var(--green)':'var(--red)'};font-weight:800">${pl>=0?'+':''}${pl}%${plYen!==null?'（'+(plYen>=0?'+':'')+plYen.toLocaleString()+'円）':''}</div>`:''}</div>
+      </div>
+      <div class="ladder">
+        <div><span class="lab">押し目</span><span class="val">${h.dip||'-'}</span></div>
+        <div><span class="lab">買値</span><span class="val">${h.buy||'-'}</span></div>
+        <div><span class="lab">撤退</span><span class="val" style="color:var(--red)">${h.exit||'-'}</span></div>
+        <div><span class="lab">利確</span><span class="val" style="color:var(--amber)">${h.take||'-'}</span></div>
+      </div>
+      <div class="status-line" style="background:var(--${cls==='exit'?'red':cls==='take'?'amber':cls==='buy'?'green':'accent'}-bg)">
+        ${state}　—　${msg}</div>
+      <div id="closeForm${i}" style="display:none;margin-top:10px;padding:10px;background:#f3f0e9;border-radius:8px">
+        <div class="grid2">
+          <div><label>売却価格（円）</label><input id="cf_price${i}" type="number" placeholder="${h.now||''}"></div>
+          <div><label>売却理由</label>
+            <select id="cf_reason${i}">
+              <option value="take_rule">利確ライン到達（ルール通り）</option>
+              <option value="exit_rule">撤退ライン到達（ルール通り）</option>
+              <option value="scenario">シナリオ崩壊で撤退（ルール通り）</option>
+              <option value="impulse_take">なんとなく利確（ルール外）</option>
+              <option value="impulse_exit">怖くなって投げた（ルール外）</option>
+              <option value="other">その他</option>
+            </select></div>
+        </div>
+        <label>ひとことメモ（任意・振り返り用）</label>
+        <input id="cf_memo${i}" placeholder="例：決算前に降りた／我慢できず利確">
+        <button class="btn" style="margin-top:10px" onclick="confirmClose(${i})">売却を確定して記録する</button>
+      </div>
+      <button class="btn btn-ghost" style="margin-top:8px" onclick="toggleClose(${i})">売却して記録</button>
+    </div>`;
+  });
+  document.getElementById('h_list').innerHTML=html;
+}
+
+// ===== 売却して記録 =====
+function toggleClose(i){
+  const f=document.getElementById('closeForm'+i);
+  f.style.display = f.style.display==='none'?'block':'none';
+}
+function confirmClose(i){
+  const h=holds[i];
+  const price=+document.getElementById('cf_price'+i).value;
+  if(!price){alert('売却価格を入れてください');return;}
+  const reason=document.getElementById('cf_reason'+i).value;
+  const memo=document.getElementById('cf_memo'+i).value;
+  const plPct=h.buy?((price-h.buy)/h.buy*100):null;
+  const plYen=(h.buy&&h.qty)?Math.round((price-h.buy)*h.qty):null;
+  trades.push({
+    name:h.name, buy:h.buy, sell:price, qty:h.qty,
+    plPct: plPct!==null?+plPct.toFixed(2):null, plYen,
+    reason, memo, inDate:h.inDate||'', outDate:today(),
+    ruleFollow: ['take_rule','exit_rule','scenario'].includes(reason)
+  });
+  holds.splice(i,1);
+  renderHolds(); persist();
+  document.querySelector('nav button[data-tab="log"]').click();
+}
+
+// ===== 記録タブ：統計と履歴 =====
+function renderLog(){
+  const stats=document.getElementById('log_stats');
+  const list=document.getElementById('log_list');
+  if(!trades.length){
+    stats.innerHTML='';
+    list.innerHTML='<div class="empty">売却した取引がここに記録されます。<br>保有管理の「売却して記録」から登録してください。</div>';
+    return;
+  }
+  const wins=trades.filter(t=>t.plPct!==null&&t.plPct>0);
+  const losses=trades.filter(t=>t.plPct!==null&&t.plPct<=0);
+  const winRate=trades.length?Math.round(wins.length/trades.length*100):0;
+  const avgWin=wins.length?(wins.reduce((s,t)=>s+t.plPct,0)/wins.length):0;
+  const avgLoss=losses.length?Math.abs(losses.reduce((s,t)=>s+t.plPct,0)/losses.length):0;
+  const ratio=avgLoss>0?(avgWin/avgLoss).toFixed(2):'-';
+  const ruleRate=Math.round(trades.filter(t=>t.ruleFollow).length/trades.length*100);
+  const totalYen=trades.reduce((s,t)=>s+(t.plYen||0),0);
+  // テスタ式コメント
+  let advice;
+  if(trades.length<5) advice='まだ取引数が少ないので、統計より「1回1回ルール通りに動けたか」を見てください。';
+  else if(ruleRate<70) advice=`⚠️ ルール遵守率${ruleRate}%は危険水域です。競馬で学んだ通り、負けの主因は予想精度より「決めたルールを破ること」です。`;
+  else if(ratio!=='-'&&ratio<1) advice=`⚠️ 損益レシオ${ratio}は「コツコツ勝ってドカンと負ける」形です。撤退ラインで本当に切れているか確認を。`;
+  else advice=`ルール遵守率${ruleRate}%・損益レシオ${ratio}。勝率より「負けを小さく」を維持できているかが、テスタ式の生命線です。`;
+  stats.innerHTML=`<div class="card">
+    <div style="font-size:13.5px;font-weight:800;margin-bottom:8px">📊 成績サマリー（${trades.length}取引）</div>
+    <div class="ladder">
+      <div><span class="lab">勝率</span><span class="val">${winRate}%</span></div>
+      <div><span class="lab">平均利益</span><span class="val" style="color:var(--green)">+${avgWin.toFixed(1)}%</span></div>
+      <div><span class="lab">平均損失</span><span class="val" style="color:var(--red)">-${avgLoss.toFixed(1)}%</span></div>
+      <div><span class="lab">損益レシオ</span><span class="val">${ratio}</span></div>
+      <div><span class="lab">ルール遵守</span><span class="val">${ruleRate}%</span></div>
+    </div>
+    ${totalYen!==0?`<div style="text-align:center;margin-top:8px;font-weight:800;color:${totalYen>=0?'var(--green)':'var(--red)'}">通算 ${totalYen>=0?'+':''}${totalYen.toLocaleString()}円</div>`:''}
+    <div class="hint" style="margin-top:8px">${advice}</div>
+  </div>`;
+  const reasonLabel={take_rule:'利確(ルール通り)',exit_rule:'撤退(ルール通り)',scenario:'シナリオ崩壊(ルール通り)',impulse_take:'なんとなく利確(ルール外)',impulse_exit:'怖くなって投げた(ルール外)',other:'その他'};
+  let html='';
+  [...trades].reverse().forEach(t=>{
+    const col=t.plPct===null?'var(--muted)':(t.plPct>0?'var(--green)':'var(--red)');
+    html+=`<div class="card" style="padding:13px 18px">
+      <div class="row" style="border:none;padding:0">
+        <div><div class="nm">${t.name}</div>
+        <div class="meta">${t.inDate}→${t.outDate} ／ ${t.buy||'-'}円→${t.sell}円${t.qty?' ／ '+t.qty+'株':''}</div>
+        <div class="meta">${t.ruleFollow?'✅':'🚫'} ${reasonLabel[t.reason]||t.reason}${t.memo?' ／ '+t.memo:''}</div></div>
+        <div style="text-align:right;font-weight:800;color:${col}">${t.plPct!==null?(t.plPct>0?'+':'')+t.plPct+'%':''}<br>
+        <span style="font-size:12px">${t.plYen!==null?(t.plYen>=0?'+':'')+t.plYen.toLocaleString()+'円':''}</span></div>
+      </div></div>`;
+  });
+  list.innerHTML=html;
+}
+
+// ===== 保存・読み込み（localStorage：外部ホスティングで動作） =====
+function persist(){
+  try{
+    localStorage.setItem('testa-note', JSON.stringify({
+      screenList, holds, trades,
+      capTotal:document.getElementById('cap_total').value,
+      capRisk:document.getElementById('cap_risk').value
+    }));
+  }catch(e){}
+}
+function loadSaved(){
+  try{
+    const v=localStorage.getItem('testa-note');
+    if(v){
+      const o=JSON.parse(v);
+      screenList=o.screenList||[];
+      holds=o.holds||[];
+      trades=o.trades||[];
+      if(o.capTotal)document.getElementById('cap_total').value=o.capTotal;
+      if(o.capRisk)document.getElementById('cap_risk').value=o.capRisk;
+      if(screenList.length) renderScreen();
+      if(holds.length) renderHolds();
+    }
+  }catch(e){}
+}
+loadSaved();
+</script>
+</body>
+</html>
